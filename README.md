@@ -1,9 +1,12 @@
-# Assumptions
+
+# Assignment questions answered
+
+## Assumptions
 
 1. As I understood from the document each of these tour files contain data for only one tour so there are multiple tour
    files for each operator.
 
-# i. What problems do you identify in the current setup? Please enumerate them with a brief description of why you believe they are problems, and what risks they carry.
+## i. What problems do you identify in the current setup? Please enumerate them with a brief description of why you believe they are problems, and what risks they carry.
 
 1. ProcessManager spawns several TourImporters while TourProcessor has only one "Worker" that further processes the
    data. Creating tour files as described in the document seems like a fairly simple / quick task as it only outputs
@@ -22,7 +25,7 @@
    so there will be some kind of code duplication involved.
 6. File based queueing practically prevents scalability or at least makes it much less reliable.
 
-# ii. What new architecture would you suggest that optimizes for performance, scalability, and reliability?
+## ii. What new architecture would you suggest that optimizes for performance, scalability, and reliability?
 
 1. Perhaps it's worth considering spawning several sub-workers that handle start-to-end imports containing one tour
    each.
@@ -39,12 +42,53 @@
    any failures. It would even be possible to do automated queue cleanups after n number of imports from certain
    operator fail to finish successfully.
 
-[See system architecture draft here](System architecture draft.md)
+[See system architecture draft here (open in RAW - otherwise line breaks are broken)](System architecture draft.md)
 
-# iii. How would you ensure your chosen architecture is working as expected?
+## iii. How would you ensure your chosen architecture is working as expected?
 
 1. Identify potential bottlenecks and then load-test them with sample data. In this case it would be:
    1. QueueManager throughput (number of connections and queries per second).
    2. Website DB storage (import results need to be written from several hosts at the same time).
 2. Create solution's proof of concept and also test it.
 
+# Implementation
+
+Implementation solves following tasks:
+1. Fetching tours lists from tour operators.
+2. Enqueueing tours for further processing.
+
+## Requirements
+
+1. Docker installed
+2. PHP 8.1
+
+## Running assignment's code
+
+1. Running rabbitmq (message queue handler)
+
+        docker-compose up
+
+2. Running listings importer
+
+        ./run.php import:listings <operator_name>
+
+   ***Remark no 1: use "generic" as operator_name, no other operators are implemented for the purpose of this assignment***
+
+   ***Remark no 2: please note this may produce random simulated fails just to show how errors are handled***
+
+## Reasoning behind implementation logic
+
+Application defines a command that could be run for each of the tour operators. The command executes tour operator API calls 
+and fetches tour listings which are then sent over to the message queue for further processing.
+
+Domains in the application:
+- **Connectors** are an abstract layer responsible for communication with Operators' APIs. They are designed to:
+  - allow implementing API communication directly
+  - serve as wrappers for lower level API clients if Tour Operators provide such
+- **Listing**
+  - **ListingImporters** higher level than Connectors; fetches tours in batches and pushes them onto message queues
+  - **ListingEntry** singe tour entry pushed into message queue; serves only for JSON serialization purposes
+- **Queue**
+  - **QueueManager** abstract queue manager class with basic setters
+  - **AMQPQueueManager** higher level wrapper for handling RabbitMQ communication 
+- **Command** are CLI related classes

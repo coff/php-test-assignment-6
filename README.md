@@ -92,3 +92,7 @@ Domains in the application:
   - **QueueManager** abstract queue manager class with basic setters
   - **AMQPQueueManager** higher level wrapper for handling RabbitMQ communication 
 - **Command** are CLI related classes
+
+Further work would be to implement TourProcessor code which gets tour/operator information from message queue and processes 
+them to collect tour details and assets.
+
